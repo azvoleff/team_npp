@@ -1,5 +1,5 @@
 ###############################################################################
-# Mosaics MODIS MCD43A4 (500m Nadir BRDF-Adjusted Reflectance ) product to 
+# Mosaics MODIS MOD17 (1000m NPP) product to 
 # cover the spatial extent of the ZOI/CSA/PA boundary of each team site.
 # 
 # Requires a GDAL installation that supports HDF4 files - on Windows, see 
@@ -16,7 +16,7 @@ library(gfcanalysis) # for utm_zone
 library(doParallel)
 library(foreach)
 
-n_cpus <- 12
+n_cpus <- 4
 overwrite <- TRUE
 
 registerDoParallel(n_cpus)
@@ -29,10 +29,12 @@ out_folder <- file.path(in_base_dir, 'ZOI_Crops')
 
 hdfs <- dir(in_folder, pattern='.hdf$')
 tile_key <- read.csv('TEAM_Site_MODIS_Tiles.csv')
+sitecodes <- unique(tile_key$sitecode)
 
-for (sitecode in unique(tile_key$sitecode)) {
-    timestamp()
-    message('Processing ', sitecode, '...')
+n <- 1
+for (sitecode in sitecodes) {
+    message(paste0('Processing ', sitecode, ' (', n, ' of ',
+                   length(sitecodes), ').'))
     site_rows <- tile_key[tile_key$sitecode == sitecode, ]
     tile_ids <- paste0('h', sprintf('%02i', site_rows$h),
                        'v', sprintf('%02i', site_rows$v))
@@ -58,35 +60,36 @@ for (sitecode in unique(tile_key$sitecode)) {
 
     dates <- unique(as.Date(str_extract(tiles, '[0-9]{7}'), '%Y%j'))
 
-    foreach(this_date=iter(dates),
+    ret <- foreach(this_date=iter(dates),
             .packages=c('raster', 'gdalUtils', 'stringr'), 
             .inorder=FALSE) %dopar% {
-        message(this_date)
         tiles_by_date <- tiles[grepl(format(this_date, '%Y%j'), tiles)]
         srcfiles <- file.path(in_folder, tiles_by_date)
         out_base <- file.path(out_folder,
                               paste(product, sitecode,
                                     format(this_date, '%Y%j'), sep='_'))
 
-        subdatasets <- get_subdatasets(srcfiles[[1]])
-        band_names <- data.frame(band=seq(1, length(subdatasets)),
-                                 name=gsub(':', '', str_extract(subdatasets, ':[a-zA-Z0-9_]*$')))
-        write.csv(band_names, file=paste0(out_base, '_bandnames.csv'), row.names=FALSE)
-
-        # First build a VRT with all the bands in the HDF file (this mosaics 
-        # the tiles, but with delayed computation - the actual mosaicing 
-        # computations won't take place until the gdalwarp line below)
-        vrt_file <- paste0(out_base, '_temp.vrt')
-        gdalbuildvrt(srcfiles, vrt_file, separate=TRUE)
-
-        dstfile <- paste0(out_base, '.tif')
-        # Mosaic, reproject, and crop vrt
-        gdalwarp(vrt_file, dstfile, t_srs=t_srs, te=te, tr=c(1000, 1000),
-                 r='cubicspline', overwrite=overwrite,
-                 of="GTiff")
-
-        # Delete the temp files
-        unlink(vrt_file)
-        return(data.frame)
+        n_subdatasets <- length(get_subdatasets(srcfiles[[1]]))
+        for (n in 1:n_subdatasets) {
+            subdatasets <- unlist(lapply(srcfiles, function(srcfile) get_subdatasets(srcfile)[[n]]))
+            band_names <- gsub(':', '', str_extract(subdatasets, ':[a-zA-Z0-9_]*$'))
+            stopifnot(all(band_names == band_names[1]))
+            band_name <- band_names[[1]]
+            # First build a VRT with all the bands in the HDF file (this mosaics 
+            # the tiles, but with delayed computation - the actual mosaicing 
+            # computations won't take place until the gdalwarp line below)
+            vrt_file <- paste0(out_base, '_', band_name, '_temp.vrt')
+            gdalbuildvrt(subdatasets, vrt_file)
+    
+            dstfile <- paste0(out_base, '_', band_name, '.tif')
+            # Mosaic, reproject, and crop vrt
+            gdalwarp(vrt_file, dstfile, t_srs=t_srs, te=te, tr=c(1000, 1000),
+                     r='cubicspline', overwrite=overwrite,
+                     of="GTiff")
+    
+            # Delete the temp files
+            unlink(vrt_file)
+        }
     }
+    n <- n + 1
 }
