@@ -1,18 +1,18 @@
-"x"
-"sitecode"
-"area"
-"date"
-"npp_mean"
-"npp_min"
-"npp_max"
-"npp_sd"
-"npp_nvals"
-"npp_n_nas"
-"npp_n_pix"
-"qc_mean"
-"qc_min"
-"qc_max"
-"qc_sd"
-"qc_nvals"
-"qc_n_nas"
-"qc_n_pix"
+Variable,Meaning
+sitecode,TEAM site code
+area,Area over which NPP was calculated
+date,Date of end of period for this NPP value
+npp_mean,Mean NPP over the area (in kg C / m^2)
+npp_min,Minimum NPP over the area (in kg C / m^2)
+npp_max,Maximum NPP over the area (in kg C / m^2)
+npp_sd,Standard deviation of NPP over the area (in kg C / m^2)
+npp_nvals,Number of pixels with valid NPP values for this area
+npp_n_nas,Number of no data pixelsi n NPP layer for this area
+npp_n_pix,Total number of pixels in NPP layer for this area
+qc_mean,Mean of QC layer over the area (QC layer gives percentage of 8 day periods for which no valid data was available due to clouds or other conditions)
+qc_min,Minimum of QC layer over the area
+qc_max,Maximum of QC layer over the area
+qc_sd,Standard deviation of of QC layer over the area
+qc_nvals,Number of pixels with valid QC layer values for this area
+qc_n_nas,Number of no data pixels in QC layer for this area
+qc_n_pix,Total number of pixels in QC layer for this area
