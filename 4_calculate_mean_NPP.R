@@ -6,7 +6,7 @@ library(rgeos)
 source("notify.R")
 
 library(doParallel)
-registerDoParallel(12)
+registerDoParallel(15)
 
 zoi_folder <- '/localdisk/home/azvoleff/ZOI_CSA_PAs'
 in_base_dir <- '/localdisk/home/azvoleff/MODIS_NPP'
