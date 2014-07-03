@@ -31,11 +31,11 @@ npp <- foreach (sitecode=iter(sitecodes),
                                               '_[0-9]*_Gpp_Npp_QC_1km.tif'), 
                       full.names=TRUE)
     
-    site_npp <- foreach (aoi_label=iter(unique(aois@data$label))) %:% 
+    site_npp <- foreach (aoi_label=iter(unique(aois@data$label)),
+                        .combine=rbind, .inorder=FALSE)  %:% 
         foreach (npp_file=iter(npp_files), qc_file=iter(qc_files),
                  .packages=c('rgdal', 'rgeos', 'raster'),
-                 .combine=rbind, 
-                 .inorder=FALSE) %do% {
+                 .combine=rbind, .inorder=FALSE) %do% {
             npp_image <- stack(npp_file)
             npp_image[npp_image > 65500] <- NA
             npp_image[npp_image < 0] <- NA
